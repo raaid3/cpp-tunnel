@@ -33,11 +33,57 @@ int open_tun(const char* if_name) {
     return fd;
 }
 
+// packet is going to be in the format of: [version + IHL][...][protocol][...][src IP][dst IP]
+// parse the packet header and print info
+void print_packet(const unsigned char* buf, ssize_t len) {
+    if (len < 20) {
+        std::cout << "Packet too short\n";
+        return;
+    }
+
+    int version = buf[0] >> 4;
+    if (version != 4) {
+        std::cout << "Not IPv4\n";
+        return;
+    }
+
+    char src[INET_ADDRSTRLEN];
+    char dst[INET_ADDRSTRLEN];
+
+    inet_ntop(AF_INET, buf + 12, src, sizeof(src));
+    inet_ntop(AF_INET, buf + 16, dst, sizeof(dst));
+
+    int proto = buf[9];
+
+    std::cout << "Packet: "
+              << "src=" << src
+              << " dst=" << dst
+              << " proto=" << proto
+              << " len=" << len
+              << "\n";
+}
+
+
 
 int main() {
     int tun_fd = open_tun("tun0");
     if (tun_fd < 0) {
         return 1;
+    }
+
+    unsigned char buf[1500];
+    ssize_t len;
+    while (true) {
+        len = read(tun_fd, buf, sizeof(buf));
+        if (len == 0) {
+            std::cout << "EOF\n";
+            break;
+        }
+        if (len < 0) {
+            std::cerr << "Error reading from TUN: " << strerror(errno) << "\n";
+            continue;
+        }
+        print_packet(buf, len);
     }
 
     return 0;
