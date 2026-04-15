@@ -57,3 +57,20 @@ ssize_t send_udp_packet(int udp_fd, const sockaddr_in& peer, const unsigned char
 		sizeof(peer)
 	);
 }
+
+ssize_t recv_udp_packet(int udp_fd, unsigned char* data, size_t len, sockaddr_in* out_from) {
+	if (out_from == nullptr) {
+		errno = EINVAL;
+		return -1;
+	}
+
+	socklen_t from_len = sizeof(*out_from);
+	return recvfrom(
+		udp_fd,
+		data,
+		len,
+		0,
+		reinterpret_cast<sockaddr*>(out_from),
+		&from_len
+	);
+}
