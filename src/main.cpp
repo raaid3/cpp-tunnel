@@ -92,8 +92,22 @@ int main() {
                       << " from=" << from_ip << ":" << ntohs(from_addr.sin_port)
                       << "\n";
 
-            // for now, receive and inspect only
             print_packet(udp_buf, received);
+
+            ssize_t written = write(tun_fd, udp_buf, static_cast<size_t>(received));
+            if (written < 0) {
+                std::cerr << "error writing packet to TUN: " << strerror(errno)
+                          << "\n";
+                continue;
+            }
+
+            if (written != received) {
+                std::cerr << "partial write to TUN: wrote=" << written
+                          << " expected=" << received << "\n";
+                continue;
+            }
+
+            std::cout << "TUN injected: bytes=" << written << "\n";
         }
 
         if (fds[0].revents & (POLLERR | POLLHUP | POLLNVAL)) {
